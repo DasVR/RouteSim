@@ -160,16 +160,12 @@ enum ScriptStore {
 
     static func autoScriptResource(for appName: String) -> ScriptResource? {
         switch appName {
-        case "maciOS":
-            return ScriptResource(resourceName: "maciOS", fileName: "maciOS.js")
-        case "Amethyst", "MeloNX", "XeniOS", "MeloCafe":
+        case "Amethyst", "MeloNX", "Melo", "XeniOS", "MeloCafe", "Manic EMU", "Manic", "Geode", "DukeX", "Duke X", "Duke":
             return ScriptResource(resourceName: "universal", fileName: "universal.js")
-        case "Geode":
-            return ScriptResource(resourceName: "Geode", fileName: "Geode.js")
-        case "Manic EMU":
-            return ScriptResource(resourceName: "manic", fileName: "manic.js")
         case "UTM", "DolphiniOS", "Flycast":
             return ScriptResource(resourceName: "UTM-Dolphin", fileName: "UTM-Dolphin.js")
+        case "maciOS":
+            return ScriptResource(resourceName: "maciOS", fileName: "maciOS.js")
         default:
             return nil
         }
