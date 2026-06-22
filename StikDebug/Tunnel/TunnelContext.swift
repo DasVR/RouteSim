@@ -245,7 +245,7 @@ final class JITEnableContext {
 
     private func makeFFIError(_ ptr: UnsafeMutablePointer<IdeviceFfiError>?, fallback: String) -> NSError {
         guard let ptr else { return makeError(fallback) }
-        let msg = String(validatingUTF8: ptr.pointee.message ?? "") ?? fallback
+        let msg = ptr.pointee.message.flatMap { String(validatingUTF8: $0) } ?? fallback
         let code = Int(ptr.pointee.code)
         idevice_error_free(ptr)
         return makeError(msg, code: code)
