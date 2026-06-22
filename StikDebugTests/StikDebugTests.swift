@@ -1,4 +1,6 @@
+import CoreLocation
 import XCTest
+@testable import StikDebug
 
 final class RouteSimTests: XCTestCase {
     func testRouteGeometryBearing() {
@@ -23,5 +25,3 @@ final class RouteSimTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(drive.cruiseSpeed, DrivingDynamics.minimumDrivingSpeedMps)
     }
 }
-
-import CoreLocation

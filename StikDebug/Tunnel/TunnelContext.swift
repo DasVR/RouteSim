@@ -96,15 +96,22 @@ final class JITEnableContext {
                 cleanup: { image_mounter_free($0) }
             ) { client in
                 var devices: UnsafeMutablePointer<plist_t?>?
-                var count = 0
-                if let err = image_mounter_copy_devices(client, &devices, &count) {
+                var deviceCount = 0
+                if let err = image_mounter_copy_devices(client, &devices, &deviceCount) {
                     throw makeFFIError(err, fallback: "Failed to fetch mounted devices")
                 }
                 if let devices {
-                    for i in 0..<count { plist_free(devices[i]) }
-                    free(devices)
+                    for index in 0..<deviceCount {
+                        if let device = devices[index] {
+                            plist_free(device)
+                        }
+                    }
+                    idevice_data_free(
+                        UnsafeMutableRawPointer(devices).assumingMemoryBound(to: UInt8.self),
+                        UInt(deviceCount * MemoryLayout<plist_t?>.stride)
+                    )
                 }
-                return count
+                return deviceCount
             }
         }
     }
@@ -128,7 +135,12 @@ final class JITEnableContext {
                 if let err = lockdownd_get_value(lockdown, "UniqueChipID", nil, &plist) {
                     throw makeFFIError(err, fallback: "Failed to query UniqueChipID")
                 }
-                defer { plist.map { plist_free($0) } }
+                defer {
+                    if let plist { plist_free(plist) }
+                }
+                guard let plist else {
+                    throw makeError("Failed to decode UniqueChipID")
+                }
                 var value: UInt64 = 0
                 plist_get_uint_val(plist, &value)
                 guard value != 0 else { throw makeError("Failed to decode UniqueChipID") }
