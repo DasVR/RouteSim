@@ -82,9 +82,10 @@ final class MountingProgress: ObservableObject {
 
 func isPairing() -> Bool {
     let pairingPath = PairingFileStore.prepareURL().path
-    var pairingFile: RpPairingFileHandle?
-    let error = rp_pairing_file_read(pairingPath, &pairingFile)
+    var pairingFile: OpaquePointer?
+    let error = pairingPath.withCString { rp_pairing_file_read($0, &pairingFile) }
     if error != nil {
+        if let error { idevice_error_free(error) }
         return false
     }
     rp_pairing_file_free(pairingFile)

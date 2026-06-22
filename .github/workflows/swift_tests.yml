@@ -32,6 +32,6 @@ jobs:
           xcodebuild test \
             -project StikDebug.xcodeproj \
             -scheme StikDebug \
-            -destination "generic/platform=iOS Simulator" \
+            -destination "platform=iOS Simulator,OS=latest,name=iPhone 16" \
             -only-testing:StikDebugTests \
             CODE_SIGNING_ALLOWED=NO
