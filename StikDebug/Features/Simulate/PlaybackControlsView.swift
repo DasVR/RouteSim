@@ -87,7 +87,7 @@ struct PlaybackControlsView: View {
             } label: {
                 Image(systemName: vm.loopEnabled ? "repeat.1" : "repeat")
                     .font(.title3)
-                    .foregroundStyle(vm.loopEnabled ? .accentColor : .secondary)
+                    .foregroundStyle(vm.loopEnabled ? Color.accentColor : .secondary)
             }
         }
         .frame(maxWidth: .infinity)

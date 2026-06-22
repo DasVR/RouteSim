@@ -59,7 +59,7 @@ struct PSTABrowserView: View {
     }
 
     private var routeList: some View {
-        List(filteredRoutes) { route in
+        List(filteredRoutes, id: \.id) { route in
             NavigationLink {
                 TripPickerView(route: route) { trip in
                     saveRoute(route: route, trip: trip)
@@ -68,12 +68,12 @@ struct PSTABrowserView: View {
                 HStack(spacing: 12) {
                     if let color = route.color, !color.isEmpty {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color(hex: color) ?? .accentColor)
+                            .fill(Color(hex: color) ?? Color.accentColor)
                             .frame(width: 32, height: 32)
                             .overlay(Text(route.shortName).font(.caption2.bold()).foregroundStyle(.white))
                     } else {
                         Image(systemName: "bus.fill")
-                            .foregroundStyle(.accentColor)
+                            .foregroundStyle(Color.accentColor)
                             .frame(width: 32)
                     }
                     VStack(alignment: .leading) {
@@ -122,7 +122,7 @@ private struct TripPickerView: View {
     var trips: [GTFSTrip] { GTFSService.shared.trips(forRouteID: route.id) }
 
     var body: some View {
-        List(trips) { trip in
+        List(trips, id: \.id) { trip in
             Button {
                 onSelect(trip)
                 dismiss()

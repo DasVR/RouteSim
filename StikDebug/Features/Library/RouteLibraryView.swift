@@ -103,7 +103,7 @@ private struct RouteRowView: View {
         HStack(spacing: 12) {
             Image(systemName: route.mode.systemImage)
                 .font(.title2)
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
                 .frame(width: 36)
 
             VStack(alignment: .leading, spacing: 2) {
