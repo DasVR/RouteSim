@@ -1,158 +1,261 @@
 <div align="center">
-   <img width="217" height="217" src="/assets/StikDebug.png" alt="Logo">
+
+# RouteSim
+
+**Realistic route-based location simulation for iOS developers**
+
+Simulate Walk, Bike, Drive, Bus, or Custom movement along real routes — with steady 1 Hz GPS updates, derived speed & course, and a Life360-tuned Driving profile.
+
+[![Build IPA](https://github.com/DasVR/RouteSim/actions/workflows/build_ipa.yml/badge.svg)](https://github.com/DasVR/RouteSim/actions/workflows/build_ipa.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![iOS 17.4+](https://img.shields.io/badge/iOS-17.4%2B-lightgrey)](https://developer.apple.com/ios/)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-orange)](https://developer.apple.com/xcode/swiftui/)
+
+[Getting Started](#getting-started) · [Features](#key-features) · [Build IPA](#building-from-source-no-mac-required) · [Architecture](#architecture-overview) · [Contributing](CONTRIBUTING.md)
+
 </div>
 
-<div align="center">
-  <h1><b>StikDebug</b></h1>
-  <p><i>An on-device debugger/JIT enabler for iOS versions 17.4+ powered by <a href="https://github.com/jkcoxson/idevice">idevice</a>.</i></p>
-</div>
+---
 
-<h6 align="center">
-  <a href="https://discord.gg/ZnNcrRT3M8">
-    <img src="https://img.shields.io/badge/Discord-join%20us-7289DA?logo=discord&logoColor=white&style=for-the-badge&labelColor=23272A" />
-  </a>
-  <a href="https://github.com/StephenDev0/StikDebug/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/StephenDev0/StikDebug?label=License&color=5865F2&style=for-the-badge&labelColor=23272A" />
-  </a>
-  <a href="https://github.com/StephenDev0/StikDebug/stargazers">
-    <img src="https://img.shields.io/github/stars/StephenDev0/StikDebug?label=Stars&color=FEE75C&style=for-the-badge&labelColor=23272A" />
-  </a>
-  <a href="https://github.com/StephenDev0/StikDebug/releases">
-    <img src="https://img.shields.io/github/v/release/StephenDev0/StikDebug?label=Latest&color=00BFFF&style=for-the-badge&labelColor=23272A" />
-  </a>
-  <br />
-</h6>
+## What is RouteSim?
 
-## Features
-- **JIT:** Enable Just In Time compilation for sideloaded apps that have the `get-task-allow` entitlement.
-- **App Launching:** Launch every app installed on your device.
-- **Console:** Live app and system logs.
-- **Scripts:** Manage automation scripts (mainly used for iOS 26 JIT). 
-- **App Expiry:** See when apps will expire and install/remove profiles.
-- **Device Info:** View detailed device metadata.
-- **Processes:** Inspect running apps/processes and terminate them.
-- **Location Simulator:** Simulate the GPS location of your device.
+**RouteSim** is a focused iOS app for **developer testing** of location-based services. It injects simulated GPS coordinates system-wide along a user-defined or imported route, with realistic movement profiles and playback controls.
 
-## Download
-> [!NOTE]
-> **Notice:** StikDebug is no longer available on the App Store. Please use the official download methods below.
+RouteSim is a clean fork of [StikDebug](https://github.com/StephenDev0/StikDebug). All JIT, process inspection, scripting, and multi-tab debugger bloat has been removed. What remains is the debug tunnel (pairing file + LocalDevVPN + DVT location simulation) and a modern SwiftUI route editor built around a **`RoutePlayer`** engine.
 
-<div align="center" style="display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap;">
-   <a href="https://stikstore.app/altdirect/?url=https://stikdebug.xyz/index.json" target="_blank">
-     <img src="https://github.com/stikstore/altdirect/blob/main/assets/png/AltSource_Blue.png" alt="Add AltSource" width="200">
-   </a>
-   <a href="https://github.com/StephenDev0/StikDebug/releases/download/3.1.6/StikDebug-3.1.6.ipa" target="_blank">
-     <img src="https://github.com/stikstore/altdirect/blob/main/assets/png/Download_Blue.png" alt="Download .ipa" width="200">
-   </a>
-</div>
+> **Developer tool only.** RouteSim is intended for testing your own apps and services on devices you control. It is not a consumer spoofing product.
 
-## Compatibility
+---
 
-| iOS Version              | Status               | Notes                                                                 |
-|--------------------------|----------------------|-----------------------------------------------------------------------|
-| 1.0 – 17.3.X             | Not supported        | Uses Different Connection Protocols                                   |
-| 17.4 – 18.x              | Fully supported      | Stable                                                                |
-| 26.0+              | Supported            | Limited App Availability (Developers need to update their apps to work.) |
+## Key Features
 
-## How to Enable JIT
+| Area | What you get |
+|------|----------------|
+| **Movement modes** | Walk · Bike · **Drive** · Bus · Custom — each with tuned speed, accel, braking, and jitter |
+| **Life360 Drive mode** | Sustained 30–40 mph cruise, realistic ramp/brake, turn slowdown, strict **1 Hz** ticks at 1× |
+| **Route editor** | MapKit map — tap waypoints, drag, delete, reorder; polyline overlay |
+| **GPX import** | GPX, KML, GeoJSON, CSV, plain lat/lon text via Files app |
+| **PSTA bus routes** | Runtime GTFS download (Pinellas Suncoast Transit Authority) — pick route + trip |
+| **Playback** | Play / pause / scrub, 0.5×–10× multiplier, loop, live stats HUD (mph, course, distance, ETA) |
+| **Persistence** | Save/load named routes as JSON; export GPX |
+| **Onboarding** | Guided setup: pairing file → LocalDevVPN → Developer Mode → permissions |
+| **Background** | Silent audio + location keep-alive so simulation survives screen lock |
 
-StikDebug enables **JIT** for sideloaded apps on iOS 17.4+ without needing a computer after the initial pairing setup.
+---
 
-### Requirements
-- StikDebug installed (via AltSource, direct .ipa, or self-built)
-- A valid **pairing file** (.plist / .mobiledevicepairing) for your device
-- SideStore / AltStore / similar sideload tool (for app refreshing)
-- A loopback VPN such as [LocalDevVPN](https://apps.apple.com/us/app/localdevvpn/id6755608044)
+## Why This Exists
 
-### Steps
-1. **Obtain a pairing file**  
-   - Detailed guide: [Pairing File Instructions](https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md) (or ask in Discord).
+Location-based apps (maps, fitness, family safety, transit, geofencing) are hard to test on a desk. Simulator location is app-scoped; real-world driving is slow and non-repeatable.
 
-2. **Set up VPN**  
-   - Launch LocalDevVPN and enable the VPN.
+RouteSim lets you:
 
-4. **Enable JIT for an app**  
-   - Launch StikDebug and tapp the `Enable JIT` button.
-   - Select your sideloaded app from the list in StikDebug.  
+- Replay the **same route** with controlled speed and timing
+- Validate **driving detection** heuristics (e.g. Life360) with GPS-realistic movement
+- Test **bus dwell** and stop logic with GTFS-backed routes
+- Iterate quickly without a Mac after initial sideload setup
 
-**Troubleshooting**  
-- "Connection dropped" or loopback errors → Check iOS version compatibility / beta warnings.  
-- Heartbeat errors → Ensure that the VPN is on and that you are connecected to Wi-Fi. It may be a pairing file issue.
-- Pairing file issues → Replace file with device unlocked & trusted.  
-- Still stuck? Join the [Discord](https://discord.gg/ZnNcrRT3M8) with logs/screenshots.
+---
 
-<!-- 
 ## Screenshots
 
-<div align="center">
-  <img src="screenshots/pairing-import.png" width="320" alt="Pairing file import screen">
-  <img src="screenshots/app-list.png" width="320" alt="Sideloaded apps list">
-  <img src="screenshots/jit-enabled.png" width="320" alt="JIT successfully enabled">
-  <img src="screenshots/processes.png" width="320" alt="Process management tab">
-</div>
+> Add captures to `docs/screenshots/` and uncomment the block below.
 
-(Add images to a /screenshots/ folder in the repo and uncomment when ready.)
+<!--
+<div align="center">
+  <img src="docs/screenshots/simulate-map.png" width="280" alt="Map route editor with playback HUD">
+  <img src="docs/screenshots/modes.png" width="280" alt="Walk Bike Drive Bus mode chips">
+  <img src="docs/screenshots/library.png" width="280" alt="Saved routes library">
+  <img src="docs/screenshots/onboarding.png" width="280" alt="Onboarding pairing VPN steps">
+  <img src="docs/screenshots/psta.png" width="280" alt="PSTA GTFS route browser">
+  <img src="docs/screenshots/settings.png" width="280" alt="Settings tunnel and GTFS URL">
+</div>
 -->
 
-## Building from Source
+**Suggested screenshots**
+
+1. **Simulate tab** — map with waypoints, blue route polyline, mode chips, playback bar  
+2. **Live stats HUD** — mph, course°, distance, progress while playing  
+3. **Library** — saved routes list with mode icons  
+4. **PSTA browser** — route list with bus colors / trip picker  
+5. **Onboarding** — pairing file import step  
+6. **Settings** — tunnel status, device IP, GTFS feed URL  
+
+---
+
+## Getting Started
 
 ### Requirements
-- macOS (latest recommended)
-- Xcode 16+ (Xcode 26+ preferred for iOS 26+ support)
-- iOS device on iOS 17.4+ (for testing)
-- Git
-- Basic Xcode/Swift knowledge
 
-### Steps
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/StephenDev0/StikDebug.git
-   cd StikDebug
-   ```
+| Requirement | Notes |
+|-------------|--------|
+| **iOS 17.4+** | Uses DVT/RSD location simulation (same family as StikDebug) |
+| **Developer Mode** | Settings → Privacy & Security → Developer Mode |
+| **Pairing file** | `.plist` / `.mobiledevicepairing` from a trusted Mac ([StikDebug pairing guide](https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md)) |
+| **[LocalDevVPN](https://apps.apple.com/us/app/localdevvpn/id6755608044)** | Routes to device tunnel `10.7.0.1:49152` |
+| **Sideload tool** | SideStore, AltStore, or similar |
 
-2. **Open in Xcode**
-   - Launch Xcode
-   - Open `StikDebug.xcodeproj`
+### Install the IPA
 
-3. **Configure signing**
-   - Select the **StikDebug** target
-   - Go to **Signing & Capabilities**
-   - Sign in with your Apple ID (free or paid developer account)
-   - Set a unique **Bundle Identifier** (e.g., `com.yourname.StikDebug`)
+1. Download **`RouteSim-Debug.ipa`** from the latest [GitHub Actions run](https://github.com/DasVR/RouteSim/actions/workflows/build_ipa.yml) (Artifacts section).
+2. Sideload with SideStore or AltStore.
+3. Trust the certificate: **Settings → General → VPN & Device Management**.
 
-4. **Build & install**
-   - Select your connected device
-   - Press **Cmd + R** (or Product → Run)
-   - Trust the certificate on device: Settings → General → VPN & Device Management
+### First launch
 
-After install, follow the JIT setup steps above (pairing import, etc.).
+1. Complete **onboarding** — import pairing file.  
+2. Open **LocalDevVPN** and connect the VPN.  
+3. Enable **Developer Mode** and reboot if prompted.  
+4. RouteSim mounts the **Developer Disk Image (DDI)** automatically when the tunnel connects.  
+5. On the **Simulate** tab, add waypoints and press **Play**.
 
-## Contributing
+---
 
-Thank you for your interest in contributing to this project. Contributions of all kinds are welcome.
+## How to Use
 
-### Reporting Bugs
-If you discover a bug, please open an issue and include:
-- A clear and descriptive title
-- Steps to reproduce the issue
-- Expected behavior vs. actual behavior
-- Relevant logs, screenshots, or environment details (iOS version, device model, etc.)
+### Create a route
 
-### Suggesting Features
-To propose a new feature, open a feature request issue and provide:
-- A clear description of the feature
-- The problem it solves or the use case it addresses
-- Any relevant examples or implementation ideas
+- **Tap the map** to add waypoints (green = start, red = end).  
+- Choose a **mode** chip: Walk / Bike / Drive / Bus / Custom.  
+- **Import GPX** via the toolbar download icon.  
+- **Save** from the ⋯ menu → Library.
 
-### Code Contributions (Best Practices)
-- Follow normal Swift and SwiftUI style.
-- Write clear and easy to understand code.
-- Keep your changes consistent with how the project is already set up.
-- Make sure everything builds and works without errors.
+### Playback
 
-We appreciate your time and effort in helping improve this project.
+| Control | Behavior |
+|---------|----------|
+| **Play** | Prepares densified polyline, then ticks at **1 Hz** wall-clock |
+| **Pause** | Holds last coordinate (4 s keep-alive) so iOS does not revert to real GPS |
+| **Scrubber** | Jump along route by progress % |
+| **Speed** | 0.5×–10× — use **1× for Life360 Drive testing** |
+| **Loop** | Repeat route from start |
 
-## Code Help
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/stephendev0/stikdebug)
-## License
-StikDebug is licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) for details.
+### Bus mode + PSTA
+
+1. **Library → PSTA Routes** (or bus icon).  
+2. Download/refreshes GTFS feed (URL configurable in Settings).  
+3. Pick a route and trip → saved to Library with stop dwell metadata.
+
+---
+
+## Building from Source (No Mac Required)
+
+You do **not** need a Mac to obtain a build. CI produces an unsigned Debug IPA on every push to `main`.
+
+### GitHub Actions (recommended)
+
+1. Fork or clone this repo.  
+2. Push to `main` (or run **Actions → Build Debug IPA → Run workflow**).  
+3. When the job finishes, download artifact **`RouteSim-Debug.ipa`**.  
+4. Sideload as above.
+
+The workflow uses Xcode **26.0.1** on `macos-latest`, scheme **`StikDebug`** (internal name kept for stability), and packages **`RouteSim-Debug.ipa`**.
+
+### Local build (optional, requires Mac)
+
+```bash
+git clone https://github.com/DasVR/RouteSim.git
+cd RouteSim
+open StikDebug.xcodeproj
+```
+
+- Select the **StikDebug** scheme and your device.  
+- Signing: automatic or ad-hoc; bundle ID is `com.stik.routesim`, display name **RouteSim**.  
+- **Do not move** `StikDebug/idevice/` — `libidevice_ffi.a` is linked via build settings.
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Features/          Simulate · Library · Onboarding · Settings │
+│  Routes/            Models · RouteStore · GPX · GTFSService    │
+│  Simulation/        RoutePlayer · MovementProfile · Geometry  │
+│  Tunnel/            LocationSimulationBridge · TunnelManager │
+│  idevice/           libidevice_ffi.a (prebuilt, do not move)   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### RoutePlayer (core engine)
+
+- **Odometer-based** interpolation along a densified polyline (not per-segment `Task.sleep`).  
+- **`DispatchSourceTimer`** at ~**1 Hz** for stable derived speed/course.  
+- **`DrivingDynamics`** — accel, brake, turn slowdown, jitter.  
+- **`BusDwell`** — stop anchors and dwell windows from GTFS or defaults.  
+- **`LocationSimulator`** — serial-queue wrapper over the C bridge.
+
+### Derived speed & course (important)
+
+The FFI (`location_simulation_set`) accepts **latitude and longitude only**. CoreLocation **derives** speed and course from the rate of change between successive fixes. RouteSim spaces updates accordingly — realism is **cadence-driven**, not a direct `CLLocation.speed` write.
+
+---
+
+## Life360 Testing Notes
+
+RouteSim’s **Drive** profile is tuned for GPS-side realism:
+
+| Setting | Value |
+|---------|--------|
+| Tick cadence | **1 Hz** at **1×** multiplier |
+| Cruise | ~13.4 m/s (30 mph), floor ≥ 8 m/s (17 mph) |
+| Accel / brake | 2.0 / 2.5 m/s² |
+| Turn slowdown | Yes — bearing changes on densified polyline |
+
+### Best practices
+
+1. Use **Drive** mode, **1×** speed — not 2×+ (inflates derived speed).  
+2. Use routes with **gentle turns** and enough length to sustain cruise speed.  
+3. Keep **LocalDevVPN** connected and simulation **playing** (or paused with hold active).
+
+### Limitations (read this)
+
+> Life360 and similar apps also fuse **Core Motion** (accelerometer / activity). The DVT location service does **not** spoof motion coprocessor data — only GPS position. RouteSim optimizes everything on the GPS side; **driving detection is not guaranteed**.
+
+Use RouteSim to test **your own** location logic and to understand GPS-derived behavior — not to mislead people or violate app terms of service.
+
+---
+
+## Repository Layout
+
+```
+RouteSim/
+├── .github/workflows/build_ipa.yml   # CI → RouteSim-Debug.ipa
+├── StikDebug/                        # App source (Xcode synced root)
+│   ├── App/                          # RouteSimApp, RootView
+│   ├── Tunnel/                       # Pairing, VPN tunnel, location bridge
+│   ├── Simulation/                   # RoutePlayer engine
+│   ├── Routes/                       # Persistence, GPX, GTFS
+│   ├── Features/                     # SwiftUI screens
+│   ├── Services/                     # Background keep-alive
+│   └── idevice/                      # libidevice_ffi.a + headers (committed)
+├── StikDebug.xcodeproj/              # Scheme name: StikDebug
+├── StikDebugTests/
+└── StikDebugUITests/
+```
+
+---
+
+## Credits
+
+| Project | Role |
+|---------|------|
+| **[StikDebug](https://github.com/StephenDev0/StikDebug)** by Stephen | Original debug tunnel, pairing, DDI, location FFI — fork base |
+| **[idevice](https://github.com/jkcoxson/idevice)** | Rust/C FFI for RSD and `DtSimulateLocation` |
+| **RouteSim fork** | Route engine, UI, GTFS, persistence, documentation |
+
+---
+
+## License & Disclaimer
+
+- **RouteSim** documentation and new application code in this repository: **[MIT License](LICENSE)**.  
+- **Upstream:** StikDebug and bundled `idevice` components are subject to their original licenses — see [NOTICE](NOTICE.md).
+
+### Disclaimer
+
+RouteSim is provided **for legitimate developer testing** on devices you own or are authorized to use. You are responsible for compliance with applicable law, Apple Developer policies, and third-party app terms. The authors do not encourage location misrepresentation, stalking, fraud, or circumvention of safety or parental-control products. **Use responsibly.**
+
+---
+
+<div align="center">
+  <sub>Built for developers who need repeatable, realistic location testing.</sub>
+</div>

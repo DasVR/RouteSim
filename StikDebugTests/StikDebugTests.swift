@@ -1,81 +1,27 @@
-//
-//  StikDebugTests.swift
-//  StikDebugTests
-//
-//  Created by Stephen on 3/26/25.
-//
+import XCTest
 
-import Foundation
-import Testing
-@testable import StikDebug
-
-struct StikDebugTests {
-
-    @Test func txmDetectionUsesClassicTXMBeforeIOS266() async throws {
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: false,
-                hasTXMClassic: false,
-                hardwareIdentifier: "iPhone15,2"
-            ) == false
-        )
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: false,
-                hasTXMClassic: true,
-                hardwareIdentifier: "iPhone1,1"
-            ) == true
-        )
+final class RouteSimTests: XCTestCase {
+    func testRouteGeometryBearing() {
+        let a = CLLocationCoordinate2D(latitude: 27.9472, longitude: -82.4586)
+        let b = CLLocationCoordinate2D(latitude: 27.9550, longitude: -82.4500)
+        let bearing = RouteGeometry.bearing(from: a, to: b)
+        XCTAssertGreaterThan(bearing, 0)
+        XCTAssertLessThan(bearing, 360)
     }
 
-    @Test func txmDetectionUsesClassicTXMWhenAvailableOnIOS266() async throws {
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: true,
-                hasTXMClassic: true,
-                hardwareIdentifier: "iPhone1,1"
-            ) == true
-        )
+    func testDensifyIncreasesPoints() {
+        let coords = [
+            CLLocationCoordinate2D(latitude: 27.9472, longitude: -82.4586),
+            CLLocationCoordinate2D(latitude: 27.9600, longitude: -82.4500)
+        ]
+        let dense = RouteGeometry.densify(coords, maxStepMeters: 20)
+        XCTAssertGreaterThan(dense.count, 2)
     }
 
-    @Test func txmDetectionFallsBackToIPhoneThresholdOnIOS266() async throws {
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: true,
-                hasTXMClassic: false,
-                hardwareIdentifier: "iPhone14,1"
-            ) == false
-        )
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: true,
-                hasTXMClassic: false,
-                hardwareIdentifier: "iPhone14,2"
-            ) == true
-        )
+    func testMovementProfileDefaults() {
+        let drive = MovementProfile.drive
+        XCTAssertGreaterThanOrEqual(drive.cruiseSpeed, DrivingDynamics.minimumDrivingSpeedMps)
     }
-
-    @Test func txmDetectionFallsBackToIPadThresholdOnIOS266() async throws {
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: true,
-                hasTXMClassic: false,
-                hardwareIdentifier: "iPad14,4"
-            ) == false
-        )
-        #expect(
-            ProcessInfo.hasTXMSupport(
-                isIOS266OrNewer: true,
-                hasTXMClassic: false,
-                hardwareIdentifier: "iPad14,5"
-            ) == true
-        )
-    }
-
-    @Test func deviceVersionParsesSupportedIdentifiers() async throws {
-        #expect(ProcessInfo.processInfo.deviceVersion(from: "iPhone14,2") == 14.2)
-        #expect(ProcessInfo.processInfo.deviceVersion(from: "iPad14,5") == 14.5)
-        #expect(ProcessInfo.processInfo.deviceVersion(from: "Mac14,2") == nil)
-    }
-
 }
+
+import CoreLocation

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: RouteSim Discussions
+    url: https://github.com/DasVR/RouteSim/discussions
+    about: Ask questions and share testing workflows (not for bug reports)
+  - name: StikDebug upstream (pairing / tunnel)
+    url: https://github.com/StephenDev0/StikDebug
+    about: Original project — pairing file and tunnel troubleshooting guides

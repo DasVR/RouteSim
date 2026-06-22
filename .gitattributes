@@ -1,0 +1,2 @@
+# Mark large binaries so git diff doesn't choke
+StikDebug/idevice/libidevice_ffi.a binary

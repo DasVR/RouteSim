@@ -1,27 +1,60 @@
-name: Feature Request
-description: Suggest a new feature or improvement
+name: Feature request
+description: Suggest an improvement to the simulation engine, routes, or developer UX
+title: "[Feature]: "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have an idea for StikDebug? Let us know!
-  - type: textarea
-    id: description
+        Feature requests should align with RouteSim's scope: **realistic route-based location simulation** for developer testing.
+        We generally won't accept JIT, process inspection, or general debugger features.
+
+  - type: dropdown
+    id: area
     attributes:
-      label: Description
-      description: A clear description of the feature you'd like.
+      label: Area
+      options:
+        - RoutePlayer / simulation engine
+        - Movement profiles (Walk/Bike/Drive/Bus/Custom)
+        - Life360 / driving detection tuning
+        - Map editor / waypoints
+        - GPX / import formats
+        - GTFS / transit routes
+        - Persistence / export
+        - Onboarding / tunnel
+        - UI / UX
+        - CI / documentation
+        - Other
     validations:
       required: true
+
   - type: textarea
-    id: use-case
+    id: problem
     attributes:
-      label: Use Case
-      description: Why would this be useful? What problem does it solve?
+      label: Problem or use case
+      description: What developer testing scenario does this solve?
+      placeholder: e.g. I need to simulate highway on-ramps with sharper accel curves for my app's drive detection
     validations:
       required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+    validations:
+      required: true
+
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives Considered
-      description: Have you considered any alternative solutions or workarounds?
+      label: Alternatives considered
+      description: Any workarounds you've tried?
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This is for legitimate developer testing on my own device(s)
+        - label: This does not require re-adding StikDebug JIT/script/process features

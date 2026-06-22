@@ -1,66 +1,117 @@
-name: Bug Report
-description: Report a bug or unexpected behavior
+name: Bug report
+description: Report a crash, tunnel failure, playback issue, or GTFS/import bug
+title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug. Please fill out the information below to help us fix it.
+        Thanks for reporting a bug. Please fill in as much as you can — especially for simulation issues, include mode and speed multiplier.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Tunnel / pairing / LocalDevVPN
+        - Location simulation (pin doesn't move)
+        - RoutePlayer / playback / speed
+        - Map editor / waypoints
+        - GPX / file import
+        - PSTA / GTFS
+        - Onboarding / DDI mount
+        - CI / build
+        - Other
+    validations:
+      required: true
+
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: A clear description of the bug.
-      placeholder: Describe what happened...
+      label: What happened?
+      description: Clear description of the bug
+      placeholder: e.g. Drive mode at 1x — Life360 shows walking speed after 30 seconds
     validations:
       required: true
+
   - type: textarea
     id: steps
     attributes:
-      label: Steps to Reproduce
-      description: How can we reproduce this?
+      label: Steps to reproduce
       placeholder: |
-        1. Go to ...
-        2. Tap on ...
-        3. See error
+        1. Import pairing file
+        2. Connect LocalDevVPN
+        3. Add 5 waypoints, Drive mode, 1x
+        4. Press Play
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
-      label: Expected Behavior
-      description: What did you expect to happen?
+      label: Expected behavior
     validations:
       required: true
-  - type: input
-    id: ios-version
+
+  - type: textarea
+    id: actual
     attributes:
-      label: iOS Version
-      placeholder: e.g. 18.3.1
+      label: Actual behavior
     validations:
       required: true
+
+  - type: input
+    id: ios
+    attributes:
+      label: iOS version
+      placeholder: e.g. 18.2
+    validations:
+      required: true
+
   - type: input
     id: device
     attributes:
-      label: Device
+      label: Device model
       placeholder: e.g. iPhone 15 Pro
     validations:
       required: true
-  - type: input
-    id: app-version
+
+  - type: dropdown
+    id: install
     attributes:
-      label: StikDebug Version
-      placeholder: e.g. 1.0.0
+      label: How did you install RouteSim?
+      options:
+        - GitHub Actions IPA (RouteSim-Debug.ipa)
+        - Built locally in Xcode
+        - Other
     validations:
       required: true
+
+  - type: input
+    id: mode
+    attributes:
+      label: Movement mode (if applicable)
+      placeholder: Walk / Bike / Drive / Bus / Custom
+
+  - type: input
+    id: multiplier
+    attributes:
+      label: Speed multiplier (if applicable)
+      placeholder: e.g. 1.0
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: LocalDevVPN is connected
+        - label: Valid pairing file imported
+        - label: Developer Mode enabled on device
+        - label: DDI mounted (Settings shows connected / no mount error)
+
   - type: textarea
     id: logs
     attributes:
-      label: Logs
-      description: Any relevant logs from the app's log viewer.
+      label: Logs or screenshots
+      description: Paste relevant log lines or attach screenshots
       render: shell
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots
-      description: If applicable, add screenshots to help explain the issue.

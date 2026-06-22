@@ -1,59 +1,147 @@
+# Build an unsigned Debug IPA for RouteSim (display name) from the StikDebug Xcode target.
+#
+# Why scheme "StikDebug"?
+#   Xcode project/target/scheme kept as StikDebug for CI stability after the fork.
+#   CFBundleDisplayName is RouteSim; bundle ID is com.stik.routesim.
+#
+# Output artifact: RouteSim-Debug.ipa (sideload via SideStore / AltStore)
+#
+# Prerequisites in repo:
+#   - StikDebug/idevice/libidevice_ffi.a must be committed (~97 MB)
+#   - PBXFileSystemSynchronizedRootGroup auto-includes App/, Tunnel/, Simulation/, etc.
+
 name: Build Debug IPA
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: routesim-ipa-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  PROJECT: StikDebug.xcodeproj
+  SCHEME: StikDebug
+  CONFIGURATION: Debug
+  DEPLOYMENT_TARGET: "17.4"
+  IPA_NAME: RouteSim-Debug.ipa
+  BUNDLE_ID: com.stik.routesim
+  DISPLAY_NAME: RouteSim
+  UPLOAD_IPA: ${{ vars.UPLOAD_IPA || 'true' }}
+
 jobs:
   build:
-    name: Build IPA
+    name: Build RouteSim IPA
     runs-on: macos-latest
-    env:
-      UPLOAD_IPA: ${{ vars.UPLOAD_IPA || 'true' }}
+    timeout-minutes: 45
 
     steps:
-      - name: 1. Fetch Source Code
-        uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: 2. Configure Xcode Environment
+      - name: Select Xcode 26.0.1
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '26.0.1'
+          xcode-version: "26.0.1"
 
-      - name: 3. Compile Project Archive
+      - name: Preflight - verify layout and FFI library
         run: |
+          set -euo pipefail
+          echo "=== RouteSim source layout ==="
+          for dir in App Tunnel Simulation Routes Features Services Support Core; do
+            test -d "StikDebug/${dir}" || { echo "::error::Missing StikDebug/${dir}"; exit 1; }
+            echo "  OK  StikDebug/${dir}/"
+          done
+          test -d "StikDebug/idevice" || { echo "::error::Missing StikDebug/idevice/"; exit 1; }
+          test -f "StikDebug/idevice/idevice.h" || { echo "::error::Missing idevice.h"; exit 1; }
+          test -f "StikDebug/idevice/module.modulemap" || { echo "::error::Missing module.modulemap"; exit 1; }
+          test -f "StikDebug/idevice/libidevice_ffi.a" || {
+            echo "::error::StikDebug/idevice/libidevice_ffi.a is missing."
+            echo "This prebuilt static library must be committed. Do not move idevice/."
+            exit 1
+          }
+          LIB_SIZE=$(stat -f%z "StikDebug/idevice/libidevice_ffi.a")
+          echo "  OK  libidevice_ffi.a (${LIB_SIZE} bytes)"
+          test -f "${{ env.PROJECT }}/project.pbxproj" || { echo "::error::Missing Xcode project"; exit 1; }
+          echo "=== Xcode ==="
+          xcodebuild -version
+          xcodebuild -list -project "${{ env.PROJECT }}"
+
+      - name: Archive (unsigned Debug, iphoneos)
+        run: |
+          set -euo pipefail
           xcodebuild clean archive \
-            -project StikDebug.xcodeproj \
-            -scheme "StikDebug" \
-            -configuration Debug \
+            -project "${{ env.PROJECT }}" \
+            -scheme "${{ env.SCHEME }}" \
+            -configuration "${{ env.CONFIGURATION }}" \
             -archivePath build/StikDebug.xcarchive \
             -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
+            -destination "generic/platform=iOS" \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_OPTIMIZATION_LEVEL="-Onone" \
-            IPHONEOS_DEPLOYMENT_TARGET=17.4
+            IPHONEOS_DEPLOYMENT_TARGET="${{ env.DEPLOYMENT_TARGET }}"
+          test -d build/StikDebug.xcarchive/Products/Applications/StikDebug.app
 
-      - name: 4. Package .app into .ipa
+      - name: Verify bundle metadata
         run: |
-          cp -R build/StikDebug.xcarchive/Products/Applications/StikDebug.app .
-          mkdir -p Payload
-          cp -R StikDebug.app Payload/
-          zip -r StikDebug.ipa Payload
-          rm -rf Payload StikDebug.app
+          set -euo pipefail
+          PLIST="build/StikDebug.xcarchive/Products/Applications/StikDebug.app/Info.plist"
+          ACTUAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST")
+          ACTUAL_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$PLIST" 2>/dev/null || echo "unknown")
+          echo "Bundle ID: $ACTUAL_ID"
+          echo "Display name: $ACTUAL_NAME"
+          test "$ACTUAL_ID" = "${{ env.BUNDLE_ID }}"
 
-      - name: 5. Store IPA as Workflow Artifact
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/StikDebug.xcarchive/Products/Applications/StikDebug.app"
+          rm -rf Payload "${{ env.IPA_NAME }}"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qr "${{ env.IPA_NAME }}" Payload
+          rm -rf Payload
+          ls -lh "${{ env.IPA_NAME }}"
+
+      - name: Upload artifact
         if: env.UPLOAD_IPA == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: StikDebug-Debug.ipa
-          path: StikDebug.ipa
+          name: ${{ env.IPA_NAME }}
+          path: ${{ env.IPA_NAME }}
           retention-days: 90
+          if-no-files-found: error
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## RouteSim CI"
+            echo ""
+            if [ -f "${{ env.IPA_NAME }}" ]; then
+              echo "Built **${{ env.IPA_NAME }}** (unsigned Debug)"
+              echo ""
+              echo "Download from **Artifacts**, then sideload with SideStore or AltStore."
+            else
+              echo "IPA was not produced. Check the Archive step logs."
+            fi
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---------|-------|"
+            echo "| Scheme | \`${{ env.SCHEME }}\` |"
+            echo "| Bundle ID | \`${{ env.BUNDLE_ID }}\` |"
+            echo "| Display name | ${{ env.DISPLAY_NAME }} |"
+            echo "| Deployment target | iOS ${{ env.DEPLOYMENT_TARGET }}+ |"
+          } >> "$GITHUB_STEP_SUMMARY"
