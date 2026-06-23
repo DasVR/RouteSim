@@ -1,0 +1,84 @@
+# Build RouteSim IPA and publish a GitHub Release when a version tag is pushed.
+#
+# Usage:
+#   git tag v1.0.0
+#   git push origin v1.0.0
+#
+# Attachments: RouteSim-Debug.ipa (unsigned Debug, sideload via SideStore / AltStore)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  PROJECT: StikDebug.xcodeproj
+  SCHEME: StikDebug
+  CONFIGURATION: Debug
+  DEPLOYMENT_TARGET: "17.4"
+  IPA_NAME: RouteSim-Debug.ipa
+  BUNDLE_ID: com.stik.routesim
+  DISPLAY_NAME: RouteSim
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.0.1
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.0.1"
+
+      - name: Preflight
+        run: |
+          set -euo pipefail
+          test -f "StikDebug/idevice/libidevice_ffi.a"
+          test -f "${{ env.PROJECT }}/project.pbxproj"
+          xcodebuild -version
+
+      - name: Archive (unsigned Debug, iphoneos)
+        run: |
+          set -euo pipefail
+          xcodebuild clean archive \
+            -project "${{ env.PROJECT }}" \
+            -scheme "${{ env.SCHEME }}" \
+            -configuration "${{ env.CONFIGURATION }}" \
+            -archivePath build/StikDebug.xcarchive \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_OPTIMIZATION_LEVEL="-Onone" \
+            IPHONEOS_DEPLOYMENT_TARGET="${{ env.DEPLOYMENT_TARGET }}"
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/StikDebug.xcarchive/Products/Applications/StikDebug.app"
+          rm -rf Payload "${{ env.IPA_NAME }}"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qr "${{ env.IPA_NAME }}" Payload
+          rm -rf Payload
+          ls -lh "${{ env.IPA_NAME }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.IPA_NAME }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
