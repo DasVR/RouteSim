@@ -32,6 +32,7 @@ final class RoutePlayer: ObservableObject {
     var profile: MovementProfile = .drive
     var speedMultiplier: Double = 1.0   // 0.5–10x
     var loop: Bool = false
+    var onRouteFinished: (() -> Void)?
 
     // MARK: - State
     @Published private(set) var isPlaying = false
@@ -113,6 +114,16 @@ final class RoutePlayer: ObservableObject {
     // MARK: - Playback controls
 
     func play() {
+        if profile.mode == .standstill {
+            guard let coord = waypoints.first, !isPlaying else { return }
+            currentCoordinate = coord
+            isPlaying = true
+            simulator.stopHold()
+            Task { _ = await simulator.setLocation(coord) }
+            simulator.startHold(at: coord)
+            return
+        }
+
         guard !densified.isEmpty, !isPlaying else { return }
         isPlaying = true
         simulator.stopHold()
@@ -236,6 +247,7 @@ final class RoutePlayer: ObservableObject {
                 isPlaying = false
                 stopTick()
                 simulator.startHold(at: coord)
+                onRouteFinished?()
             }
             return
         }

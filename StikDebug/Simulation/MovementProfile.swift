@@ -7,27 +7,30 @@ enum MovementMode: String, Codable, CaseIterable, Identifiable {
     case bike
     case drive
     case bus
+    case standstill
     case custom
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .walk:   return "Walk"
-        case .bike:   return "Bike"
-        case .drive:  return "Drive"
-        case .bus:    return "Bus"
-        case .custom: return "Custom"
+        case .walk:       return "Walk"
+        case .bike:       return "Bike"
+        case .drive:      return "Drive"
+        case .bus:        return "Bus"
+        case .standstill: return "Standstill"
+        case .custom:     return "Custom"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .walk:   return "figure.walk"
-        case .bike:   return "bicycle"
-        case .drive:  return "car.fill"
-        case .bus:    return "bus.fill"
-        case .custom: return "slider.horizontal.3"
+        case .walk:       return "figure.walk"
+        case .bike:       return "bicycle"
+        case .drive:      return "car.fill"
+        case .bus:        return "bus.fill"
+        case .standstill: return "pause.circle"
+        case .custom:     return "slider.horizontal.3"
         }
     }
 }
@@ -126,6 +129,19 @@ struct MovementProfile: Codable {
         customSpeedMps: 9.0
     )
 
+    static let standstill = MovementProfile(
+        mode: .standstill,
+        cruiseSpeed: 0,
+        maxSpeed: 0,
+        acceleration: 0,
+        braking: 0,
+        turnSlowdownFactor: 1,
+        speedJitter: 0,
+        useRoadSpeedLimits: false,
+        stopDwellRange: nil,
+        customSpeedMps: 0
+    )
+
     static func custom(speedMps: CLLocationSpeed) -> MovementProfile {
         MovementProfile(
             mode: .custom,
@@ -143,11 +159,12 @@ struct MovementProfile: Codable {
 
     static func `default`(for mode: MovementMode) -> MovementProfile {
         switch mode {
-        case .walk:   return .walk
-        case .bike:   return .bike
-        case .drive:  return .drive
-        case .bus:    return .bus
-        case .custom: return .custom(speedMps: 5.0)
+        case .walk:       return .walk
+        case .bike:       return .bike
+        case .drive:      return .drive
+        case .bus:        return .bus
+        case .standstill: return .standstill
+        case .custom:     return .custom(speedMps: 5.0)
         }
     }
 }

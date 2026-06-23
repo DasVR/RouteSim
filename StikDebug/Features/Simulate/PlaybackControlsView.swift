@@ -5,18 +5,21 @@ struct PlaybackControlsView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // Progress scrubber
-            if vm.waypoints.count >= 2 {
+            if showProgressRow {
                 progressRow
             }
 
-            // Transport controls
             transportRow
 
-            // Speed + loop
-            optionsRow
+            if vm.selectedMode != .standstill {
+                optionsRow
+            }
         }
         .padding(12)
+    }
+
+    private var showProgressRow: Bool {
+        vm.selectedMode != .standstill && vm.waypoints.count >= 2 && vm.stats.totalDistance > 0
     }
 
     // MARK: - Progress
@@ -48,7 +51,6 @@ struct PlaybackControlsView: View {
 
     private var transportRow: some View {
         HStack(spacing: 24) {
-            // Rewind to start
             Button {
                 vm.stop()
             } label: {
@@ -57,11 +59,9 @@ struct PlaybackControlsView: View {
             }
             .disabled(vm.stats.odometer == 0 && !vm.isPlaying)
 
-            // Play / Pause
             Button {
-                if vm.waypoints.count < 2 { return }
                 if !vm.isPlaying && vm.stats.odometer == 0 {
-                    Task { await vm.prepare(); vm.playPause() }
+                    vm.playPause()
                 } else {
                     vm.playPause()
                 }
@@ -79,21 +79,22 @@ struct PlaybackControlsView: View {
             }
             .buttonStyle(.borderedProminent)
             .clipShape(Circle())
-            .disabled(vm.waypoints.count < 2 || vm.isPreparing)
+            .disabled(vm.isPreparing)
 
-            // Loop toggle
-            Button {
-                vm.loopEnabled.toggle()
-            } label: {
-                Image(systemName: vm.loopEnabled ? "repeat.1" : "repeat")
-                    .font(.title3)
-                    .foregroundStyle(vm.loopEnabled ? Color.accentColor : .secondary)
+            if vm.selectedMode != .standstill {
+                Button {
+                    vm.loopEnabled.toggle()
+                } label: {
+                    Image(systemName: vm.loopEnabled ? "repeat.1" : "repeat")
+                        .font(.title3)
+                        .foregroundStyle(vm.loopEnabled ? Color.accentColor : .secondary)
+                }
             }
         }
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Speed multiplier + loop
+    // MARK: - Speed multiplier
 
     private var optionsRow: some View {
         HStack {

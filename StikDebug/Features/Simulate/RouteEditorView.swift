@@ -8,11 +8,36 @@ struct RouteEditorView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             mapLayer
-            controlsOverlay
+
+            VStack(spacing: 0) {
+                if let prompt = vm.placementPrompt {
+                    Text(prompt)
+                        .font(.subheadline.bold())
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.regularMaterial)
+                        .clipShape(Capsule())
+                        .padding(.top, 8)
+                        .padding(.horizontal)
+                }
+
+                Spacer()
+
+                controlsOverlay
+            }
         }
         .navigationTitle("RouteSim")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarItems }
+        .onAppear {
+            vm.startUserLocationUpdates()
+            if vm.placementPhase == .idle {
+                vm.beginNewRoute(for: vm.selectedMode)
+            }
+        }
+        .onDisappear {
+            vm.stopUserLocationUpdates()
+        }
         .fileImporter(
             isPresented: $vm.showFilePicker,
             allowedContentTypes: GPXImporter.supportedTypes,
@@ -37,43 +62,48 @@ struct RouteEditorView: View {
     // MARK: - Map
 
     private var mapLayer: some View {
-        Map(position: $vm.mapPosition) {
-            // Waypoint markers
-            ForEach(Array(vm.waypoints.enumerated()), id: \.element.id) { idx, wp in
-                Annotation(wp.name ?? "WP \(idx + 1)", coordinate: wp.coordinate) {
-                    WaypointPin(index: idx, isFirst: idx == 0, isLast: idx == vm.waypoints.count - 1)
-                        .gesture(
-                            DragGesture()
-                                .onEnded { value in
-                                    // MapKit coordinate conversion — approximation
-                                }
-                        )
-                        .contextMenu {
-                            Button("Delete", role: .destructive) {
-                                vm.deleteWaypoint(wp)
-                            }
+        MapReader { proxy in
+            Map(position: $vm.mapPosition) {
+                UserAnnotation()
+
+                if let start = vm.startPinCoordinate {
+                    let label = vm.selectedMode == .standstill ? "Hold" : "Start"
+                    Annotation(label, coordinate: start) {
+                        if vm.selectedMode == .standstill {
+                            HoldPin()
+                        } else {
+                            StartPin()
                         }
+                    }
+                }
+
+                if let end = vm.endPinCoordinate {
+                    Annotation("End", coordinate: end) {
+                        EndPin()
+                    }
+                }
+
+                if let coord = vm.currentCoordinate {
+                    Annotation("", coordinate: coord) {
+                        Circle()
+                            .fill(.blue)
+                            .frame(width: 16, height: 16)
+                            .overlay(Circle().stroke(.white, lineWidth: 2))
+                    }
+                }
+
+                if let poly = vm.routePolyline {
+                    MapPolyline(poly)
+                        .stroke(.blue, lineWidth: 6)
                 }
             }
-
-            // Current simulated position
-            if let coord = vm.currentCoordinate {
-                Annotation("", coordinate: coord) {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 16, height: 16)
-                        .overlay(Circle().stroke(.white, lineWidth: 2))
+            .mapStyle(.standard)
+            .onTapGesture { screenPoint in
+                if let coordinate = proxy.convert(screenPoint, from: .local) {
+                    vm.handleMapTap(at: coordinate)
                 }
-            }
-
-            // Route overlay
-            if let poly = vm.routePolyline {
-                MapPolyline(poly)
-                    .stroke(.blue.opacity(0.7), lineWidth: 4)
             }
         }
-        .mapStyle(.standard)
-        .onTapGesture { /* handled by map tap — MapKit TapGesture not directly supported */ }
         .ignoresSafeArea(edges: .top)
     }
 
@@ -81,17 +111,14 @@ struct RouteEditorView: View {
 
     private var controlsOverlay: some View {
         VStack(spacing: 0) {
-            // Mode + multiplier bar
             modeBar
                 .background(.regularMaterial)
 
-            // Live stats HUD (only while playing)
             if vm.isPlaying || vm.stats.odometer > 0 {
                 LiveStatsView(stats: vm.stats)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            // Playback controls
             PlaybackControlsView(vm: vm)
                 .background(.regularMaterial)
         }
@@ -107,7 +134,7 @@ struct RouteEditorView: View {
             HStack(spacing: 8) {
                 ForEach(MovementMode.allCases) { mode in
                     ModeChip(mode: mode, isSelected: vm.selectedMode == mode) {
-                        vm.selectedMode = mode
+                        vm.selectMode(mode)
                     }
                 }
             }
@@ -128,11 +155,18 @@ struct RouteEditorView: View {
             }
         }
         ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                vm.requestUserLocationAccess()
+                vm.useCurrentLocationAsStart()
+            } label: {
+                Image(systemName: "location.fill")
+            }
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
             Menu {
                 Button("Save Route") { vm.showSaveSheet = true }
-                Button("Clear Waypoints", role: .destructive) {
-                    vm.waypoints = []
-                    vm.routePolyline = nil
+                Button("Clear Route", role: .destructive) {
+                    vm.beginNewRoute(for: vm.selectedMode)
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -141,25 +175,45 @@ struct RouteEditorView: View {
     }
 }
 
-// MARK: - Waypoint pin
+// MARK: - Map pins
 
-private struct WaypointPin: View {
-    let index: Int
-    let isFirst: Bool
-    let isLast: Bool
-
+private struct StartPin: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(isFirst ? Color.green : (isLast ? Color.red : Color.blue))
+                .fill(Color.green)
                 .frame(width: 28, height: 28)
-            if isFirst {
-                Image(systemName: "flag.fill").foregroundStyle(.white).font(.caption)
-            } else if isLast {
-                Image(systemName: "mappin").foregroundStyle(.white).font(.caption)
-            } else {
-                Text("\(index + 1)").foregroundStyle(.white).font(.caption2.bold())
-            }
+            Image(systemName: "flag.fill")
+                .foregroundStyle(.white)
+                .font(.caption)
+        }
+        .shadow(radius: 3)
+    }
+}
+
+private struct EndPin: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.red)
+                .frame(width: 28, height: 28)
+            Image(systemName: "mappin")
+                .foregroundStyle(.white)
+                .font(.caption)
+        }
+        .shadow(radius: 3)
+    }
+}
+
+private struct HoldPin: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.orange)
+                .frame(width: 28, height: 28)
+            Image(systemName: "pause.fill")
+                .foregroundStyle(.white)
+                .font(.caption)
         }
         .shadow(radius: 3)
     }
